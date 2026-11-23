@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>智能垃圾桶实时监测系统</title>
+  <title>智能垃圾桶双桶监测系统</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -11,24 +11,36 @@
       background-color: #f3f5f8;
       color: #1f2937;
       display: flex;
-      justify-content: center;
+      flex-direction: column;
+      align-items: center;
       padding: 24px 16px;
     }
-    .container {
+    .page-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: #111827;
+    }
+    .bins-wrapper {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
       width: 100%;
-      max-width: 480px;
+      max-width: 820px;
+    }
+    .container {
       background: #ffffff;
       border-radius: 16px;
-      padding: 24px;
+      padding: 22px;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
     }
     .header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 20px;
+      margin-bottom: 18px;
     }
-    .header h1 { font-size: 20px; font-weight: 600; }
+    .header h2 { font-size: 18px; font-weight: 600; }
     .badge {
       padding: 4px 10px;
       border-radius: 999px;
@@ -42,21 +54,21 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      margin: 20px 0 28px;
+      margin: 16px 0 24px;
     }
     .bin-lid {
-      width: 148px;
-      height: 12px;
+      width: 136px;
+      height: 10px;
       background: #9ca3af;
       border-radius: 6px 6px 2px 2px;
       margin-bottom: 4px;
     }
     .bin-body {
-      width: 136px;
-      height: 180px;
+      width: 124px;
+      height: 160px;
       border: 4px solid #9ca3af;
       border-top: none;
-      border-radius: 0 0 16px 16px;
+      border-radius: 0 0 14px 14px;
       position: relative;
       overflow: hidden;
       background: #f9fafb;
@@ -76,41 +88,45 @@
     .bin-pct-text {
       position: relative;
       z-index: 2;
-      font-size: 32px;
+      font-size: 28px;
       font-weight: 700;
       color: #111827;
     }
     .grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 20px;
+      gap: 10px;
+      margin-bottom: 14px;
     }
     .card {
       background: #f8fafc;
       border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      padding: 14px;
+      border-radius: 10px;
+      padding: 12px;
     }
-    .card-label { font-size: 13px; color: #64748b; margin-bottom: 6px; }
-    .card-value { font-size: 20px; font-weight: 600; color: #0f172a; }
-    .footer {
-      text-align: center;
-      font-size: 12px;
-      color: #64748b;
-    }
+    .card-label { font-size: 12px; color: #64748b; margin-bottom: 4px; }
+    .card-value { font-size: 17px; font-weight: 600; color: #0f172a; }
     .status-msg {
-      margin-top: 12px;
-      padding: 10px;
+      margin-top: 10px;
+      padding: 8px;
       border-radius: 8px;
       font-size: 12px;
       background: #fef3c7;
       color: #92400e;
       display: none;
     }
-    button {
-      margin-top: 12px;
+    .control-bar {
       width: 100%;
+      max-width: 820px;
+      margin-top: 20px;
+      text-align: center;
+      font-size: 13px;
+      color: #64748b;
+    }
+    button {
+      margin-top: 10px;
+      width: 100%;
+      max-width: 240px;
       padding: 10px;
       border: none;
       border-radius: 8px;
@@ -124,63 +140,81 @@
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <h1>智能垃圾桶 (bin01)</h1>
-      <span id="sysStatus" class="badge">等待连接</span>
-    </div>
+  <h1 class="page-title">智能垃圾桶实时监测系统</h1>
 
-    <div class="bin-visual">
-      <div class="bin-lid"></div>
-      <div class="bin-body">
-        <div id="binFill" class="bin-fill"></div>
-        <div id="pctText" class="bin-pct-text">--%</div>
-      </div>
-    </div>
+  <div class="bins-wrapper" id="binsContainer"></div>
 
-    <div class="grid">
-      <div class="card">
-        <div class="card-label">剩余高度 (dist)</div>
-        <div id="distVal" class="card-value">-- mm</div>
-      </div>
-      <div class="card">
-        <div class="card-label">电池电压 (vbat)</div>
-        <div id="vbatVal" class="card-value">-- mV</div>
-      </div>
-      <div class="card">
-        <div class="card-label">Wi-Fi 信号 (rssi)</div>
-        <div id="rssiVal" class="card-value">-- dBm</div>
-      </div>
-      <div class="card">
-        <div class="card-label">传感器状态 (err)</div>
-        <div id="errVal" class="card-value">--</div>
-      </div>
-    </div>
-
-    <div class="footer">
-      <div id="updateTime">上次更新：尚未获取</div>
-      <div id="errorBox" class="status-msg"></div>
-      <button onclick="fetchData()">立即刷新数据</button>
-    </div>
+  <div class="control-bar">
+    <div id="updateTime">上次更新：尚未获取</div>
+    <button onclick="fetchAllDevices()">立即刷新全部数据</button>
   </div>
 
   <script>
     const PRODUCT_ID = "8BpH28Wt16";
-    const DEVICE_NAME = "bin01";
-    // 如果接口提示权限不足，请在这里替换成你的产品级或用户级 Token
-    const TOKEN = "version=2018-10-31&res=products%2F8BpH28Wt16%2Fdevices%2Fbin01&et=1893427200&method=sha1&sign=uVsW6Gnc%2FJ19nk6O4Ym5j8YItQ0%3D";
 
-    async function fetchData() {
-      const errorBox = document.getElementById("errorBox");
-      const statusBadge = document.getElementById("sysStatus");
-      const url = `https://iot-api.heclouds.com/thingmodel/query-device-property?product_id=${PRODUCT_ID}&device_name=${DEVICE_NAME}`;
+    // 在这里配置两个设备的名称和各自的 Token
+    const DEVICES = [
+      {
+        id: "bin01",
+        title: "1号垃圾桶 (bin01)",
+        token: "version=2018-10-31&res=products%2F8BpH28Wt16%2Fdevices%2Fbin01&et=1893427200&method=sha1&sign=uVsW6Gnc%2FJ19nk6O4Ym5j8YItQ0%3D"
+      },
+      {
+        id: "bin02",
+        title: "2号垃圾桶 (bin02)",
+        token: "填入bin02的Token"
+      }
+    ];
+
+    // 自动生成两个垃圾桶的界面卡片
+    function initUI() {
+      const container = document.getElementById("binsContainer");
+      container.innerHTML = DEVICES.map(dev => `
+        <div class="container">
+          <div class="header">
+            <h2>${dev.title}</h2>
+            <span id="status-${dev.id}" class="badge">等待连接</span>
+          </div>
+          <div class="bin-visual">
+            <div class="bin-lid"></div>
+            <div class="bin-body">
+              <div id="fill-${dev.id}" class="bin-fill"></div>
+              <div id="pct-${dev.id}" class="bin-pct-text">--%</div>
+            </div>
+          </div>
+          <div class="grid">
+            <div class="card">
+              <div class="card-label">剩余高度 (dist)</div>
+              <div id="dist-${dev.id}" class="card-value">-- mm</div>
+            </div>
+            <div class="card">
+              <div class="card-label">电池电压 (vbat)</div>
+              <div id="vbat-${dev.id}" class="card-value">-- mV</div>
+            </div>
+            <div class="card">
+              <div class="card-label">Wi-Fi 信号 (rssi)</div>
+              <div id="rssi-${dev.id}" class="card-value">-- dBm</div>
+            </div>
+            <div class="card">
+              <div class="card-label">传感器状态 (err)</div>
+              <div id="err-${dev.id}" class="card-value">--</div>
+            </div>
+          </div>
+          <div id="error-${dev.id}" class="status-msg"></div>
+        </div>
+      `).join("");
+    }
+
+    // 读取单个设备的数据
+    async function fetchSingleDevice(dev) {
+      const errorBox = document.getElementById(`error-${dev.id}`);
+      const statusBadge = document.getElementById(`status-${dev.id}`);
+      const url = `https://iot-api.heclouds.com/thingmodel/query-device-property?product_id=${PRODUCT_ID}&device_name=${dev.id}`;
 
       try {
         const response = await fetch(url, {
           method: "GET",
-          headers: {
-            "authorization": TOKEN
-          }
+          headers: { "authorization": dev.token }
         });
 
         const result = await response.json();
@@ -191,9 +225,7 @@
           statusBadge.className = "badge";
 
           const dataMap = {};
-          result.data.forEach(item => {
-            dataMap[item.identifier] = item.value;
-          });
+          result.data.forEach(item => { dataMap[item.identifier] = item.value; });
 
           const pct = Number(dataMap.pct ?? 0);
           const dist = dataMap.dist ?? "--";
@@ -201,13 +233,13 @@
           const rssi = dataMap.rssi ?? "--";
           const err = Number(dataMap.err ?? 0);
 
-          document.getElementById("pctText").textContent = pct + "%";
-          document.getElementById("distVal").textContent = dist + " mm";
-          document.getElementById("vbatVal").textContent = vbat + " mV";
-          document.getElementById("rssiVal").textContent = rssi + " dBm";
-          document.getElementById("errVal").textContent = err === 0 ? "正常 (0)" : "异常 (1)";
+          document.getElementById(`pct-${dev.id}`).textContent = pct + "%";
+          document.getElementById(`dist-${dev.id}`).textContent = dist + " mm";
+          document.getElementById(`vbat-${dev.id}`).textContent = vbat + " mV";
+          document.getElementById(`rssi-${dev.id}`).textContent = rssi + " dBm";
+          document.getElementById(`err-${dev.id}`).textContent = err === 0 ? "正常 (0)" : "异常 (1)";
 
-          const fillEl = document.getElementById("binFill");
+          const fillEl = document.getElementById(`fill-${dev.id}`);
           fillEl.style.height = Math.min(Math.max(pct, 0), 100) + "%";
           if (pct >= 85) {
             fillEl.style.backgroundColor = "#ef4444";
@@ -221,9 +253,6 @@
             statusBadge.textContent = "传感器异常";
             statusBadge.className = "badge error";
           }
-
-          const now = new Date();
-          document.getElementById("updateTime").textContent = "上次更新：" + now.toLocaleTimeString();
         } else {
           throw new Error(result.msg || "平台返回数据异常");
         }
@@ -231,12 +260,20 @@
         statusBadge.textContent = "请求失败";
         statusBadge.className = "badge error";
         errorBox.style.display = "block";
-        errorBox.textContent = "读取失败：" + err.message + "（如果是浏览器安全拦截或权限不足，请看说明排查）";
+        errorBox.textContent = "读取失败：" + err.message;
       }
     }
 
-    fetchData();
-    setInterval(fetchData, 5000);
+    // 同时刷新所有设备
+    async function fetchAllDevices() {
+      await Promise.all(DEVICES.map(dev => fetchSingleDevice(dev)));
+      const now = new Date();
+      document.getElementById("updateTime").textContent = "上次更新：" + now.toLocaleTimeString();
+    }
+
+    initUI();
+    fetchAllDevices();
+    setInterval(fetchAllDevices, 5000);
   </script>
 </body>
-</html>
+</html>  
